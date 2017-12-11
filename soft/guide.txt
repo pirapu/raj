@@ -1,0 +1,118 @@
+1-copy the svn ile into Program(x86) directory
+	C:\Program Files (x86)
+
+2-Set the class path
+
+3-we want our root directory be named as c:\svnroot. Then, create this directory either in command prompt or using Explorer.
+
+4-Create repositories in the svn root directories using the following commands:
+	svnadmin create c:\svnroot\test1
+	svnadmin create c:\svnroot\test2
+5-copy the Appache24 folder to c:/ drive
+
+6- install the very recent visual c++ (2017) 
+
+7-install the Appache24 using following command in cmd
+	httpd -k install
+
+8- Now to configure your server. Inside the Apache24 folder is a conf folder, 
+with a file called httpd.conf. 
+That is the main configuration file. 
+Open it in a text editor as you'll need to make a handful of edits:
+
+ServerRoot
+Find the line that starts with ServerRoot (approximately line 37). Change it to:
+
+	ServerRoot "C:/Program Files/Apache24"
+
+ServerName
+Find the line that contains ServerName (approximately line 217).
+ Remove the pound sign (#) that precedes it. Then change it to:
+
+	ServerName localhost:8080
+
+9- type http://localhost:8080
+
+10- go to the bin directory within the Subversion installation, 
+find two files with extension *.so, and put them into the (Apache)/modules directory. 
+The files are mod_authz_svn.so and mod_dav_svn.so.
+
+11- Go to the conf sub-directory within the Apache installation directory and open the httpd.conf file in any text editor.
+
+Add the following lines:
+
+
+	LoadModule dav_module modules/mod_dav.so
+	LoadModule dav_svn_module modules/mod_dav_svn.so
+	LoadModule authz_svn_module modules/mod_authz_svn.so
+
+12- After that, add the following block:
+
+<Location /svn/>
+    DAV svn
+    SVNParentPath c:/svnroot/ #specify the root for repositories
+    #http://www.archivesat.com/CVS_developers_help/thread45479.htm 
+        post which discuss why you need to specify /svn/ and not /svn
+    
+    #list repositories
+    SVNListParentPath on 
+    # our access control policy
+    AuthzSVNAccessFile bin/apachesvnauth #authentication file 
+                   #path where policy is written for each user   
+
+    AuthType Basic #type of authentication
+    AuthName "Subversion repository" #the name of the authentication 
+                                      #and the name of repository realm
+    AuthUserFile bin/apachesvnpasswd #the name of the 
+                                      #file with user passwords values
+    Require valid-user #permit to log-in only for authorized users
+</Location>
+
+<Location /svn/> - if you type in your browser something like this: http://localhost:8080/svn/, then Apache will know how to find your root repository using SVNParentPath.
+SVNParentPath c:/svnroot/ - specify the root for the repositories.
+SVNListParentPath on - permit to see the list of repositories using http://localhost:8080/svn/.
+AuthzSVNAccessFile bin/apachesvnauth - authentication file path where the policy is provided for each user. The file is stored in the bin sub-directory of Apache.
+AuthType Basic - the type of authentication.
+AuthName "Subversion repository" - the name of the authentication and the name of the repository realm.
+AuthUserFile bin/apachesvnpasswd - the name of the file with user password values, stored in the bin subdirectory of the Apache installation.
+Require valid-user - permit to log-in only for authorized users.
+
+13- Building the password file
+
+We use the AuthUserFile bin/apachesvnpasswd entry, 
+which tells Apache to find the file with passwords in the bin sub-directory 
+within the Apache installation directory. We need to build this file. 
+Go to that directory using the command prompt and type the following command:
+
+
+htpasswd.exe -c apachesvnpasswd user1
+
+You will be prompted to enter the password for user user1, 
+and the file apachesvnpasswd will be created in the bin sub-directory. 
+In order to add another user, just type the same command without -c and 
+provide the name of another user.
+
+
+htpasswd.exe -c apachesvnpasswd user2
+
+Note: only the users we created will be able to log into our repositories 
+because we used the Require valid-user parameter.
+
+14- Building the authentication file
+
+The following block is an example of the authentication file:
+
+Hide   Copy Code
+[/] * = r [test1:/] user1 = rw user2 = [test2:/] user1 = r user2 = rw
+Explanations
+
+[/] * = r - gives access to everyone to read all the repositories
+[test1:/] - gives read and write permissions to user1 for repository test1, and user2 can not read or write
+[test2:/] - user1 can read from repository test2, and user2 has full access rights
+
+15- Run Apache
+
+Theoretically, we are at the stage when we can run Apache and test our Subversion. 
+So start Apache, open the web browser and write something like this: http://localhost:8080/svn/.
+
+If you don't get any errors, you will be prompted to type the username and password.
